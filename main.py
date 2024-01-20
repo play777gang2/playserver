@@ -41,12 +41,12 @@ def certificadoleve(cpf: str, senha: str):
 @app.get("/leve/{codigo}/{cpf}")
 def leve(codigo: str, cpf: str):
     if cpf not in junto:
-        return {"error": "CPF não encontrado."}
+
 
     item = junto[cpf]
 
     if "chave" not in item:
-        return {"error": "Chave não encontrada para este CPF."}
+
 
     chave = item["chave"]
 
