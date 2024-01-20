@@ -1,7 +1,7 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from pynubank import Nubank, NuException, CertificateGenerator, HttpClient
-import ftplib
+import os
 import random
 import string
 from colorama import init, Fore, Style
@@ -34,19 +34,19 @@ def certificadoleve(cpf: str, senha: str):
     try:
         email = generator.request_code()
     except NuException:
-        return {"error": "Erro ao solicitar código."}
+        raise HTTPException(status_code=500, detail="Erro ao solicitar código.")
 
     return {"email": email}
 
 @app.get("/leve/{codigo}/{cpf}")
 def leve(codigo: str, cpf: str):
     if cpf not in junto:
-
+        raise HTTPException(status_code=404, detail="CPF não encontrado.")
 
     item = junto[cpf]
 
     if "chave" not in item:
-
+        raise HTTPException(status_code=500, detail="Chave não encontrada para este CPF.")
 
     chave = item["chave"]
 
@@ -55,9 +55,4 @@ def leve(codigo: str, cpf: str):
         save_cert(cert1, f"{codigo}.p12")
         return {"mensagem": "Play7Server - Certificado Gerado com sucesso!"}
     except Exception as e:
-        return {"error": "Erro ao gerar certificado. Verifique os dados e tente novamente."}
-
-# Restante do código...
-
-if __name__ == '__main__':
-    main()
+        raise HTTPException(status_code=500, detail="Erro ao gerar certificado. Verifique os dados e tente novamente.")
